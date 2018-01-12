@@ -2,7 +2,11 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 
 public class inflictionPointDetector {
 	
@@ -43,18 +47,20 @@ public class inflictionPointDetector {
 		return diffed;
 	}
 	
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, ParseException {
 
 		//  ---  File Parsing
 		String line;
 		ArrayList<Double> values = new ArrayList<Double>();
-		ArrayList<String> timeStamps = new ArrayList<String>();
+		ArrayList<Long> timeStamps = new ArrayList<Long>();
 		
 		
 		Assert(args.length == 1,"Please provide a single parameter which is the name of the file to process");
 		
 		File f = new File(args[0]);
 		Assert(f.exists(),String.format( "File %s doesn't exist!",args[0]));
+		
+		final DateFormat df = new SimpleDateFormat("HH:mm:ss");
 		
 		BufferedReader br = new BufferedReader(new FileReader(args[0]));
 		while((line= br.readLine()) != null ) {
@@ -63,7 +69,11 @@ public class inflictionPointDetector {
 			Assert(cells.length == 2,"Problem with input file format");
 			
 			values.add(Double.parseDouble(cells[1]));
-			timeStamps.add(cells[0]);						
+			
+			String timeStr = cells[0];
+			Date date = df.parse(timeStr);
+			
+			timeStamps.add(date.getTime());						
 		}
 		br.close();
 
@@ -82,7 +92,7 @@ public class inflictionPointDetector {
 		boolean pointFound = false;
 		for(int i=0;i<d2.length-1;i++) {
 			if((d2[i]*d2[i+1])<0) {				//  looking for sign change on the smoothed second derivative
-				System.out.format("Inflection point detected at %s\n",timeStamps.get(i+1));
+				System.out.format("Inflection point detected at %s\n", df.format(new Date(timeStamps.get(i+1))));
 				pointFound  = true;
 			}
 		}
