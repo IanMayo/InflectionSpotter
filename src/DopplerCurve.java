@@ -1,13 +1,15 @@
-
 import java.util.ArrayList;
 import java.util.Collection;
 
+import org.apache.commons.math3.analysis.solvers.BisectionSolver;
 import org.apache.commons.math3.fitting.AbstractCurveFitter;
 import org.apache.commons.math3.fitting.WeightedObservedPoint;
 import org.apache.commons.math3.fitting.WeightedObservedPoints;
+import org.apache.commons.math3.fitting.leastsquares.LeastSquaresBuilder;
 import org.apache.commons.math3.fitting.leastsquares.LeastSquaresProblem;
+import org.apache.commons.math3.linear.DiagonalMatrix;
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+
 
 public class DopplerCurve
 {
@@ -22,9 +24,30 @@ public class DopplerCurve
 
     @Override
     protected LeastSquaresProblem getProblem(
-        final Collection<WeightedObservedPoint> arg0)
+        final Collection<WeightedObservedPoint> points)
     {
-      throw new NotImplementedException();
+		final int len = points.size();
+        final double[] target  = new double[len];
+        final double[] weights = new double[len];
+        
+		int i = 0;
+        for(WeightedObservedPoint point : points) {
+            target[i]  = point.getY();
+            weights[i] = point.getWeight();
+            i += 1;
+        }
+		
+		AbstractCurveFitter.TheoreticalValuesFunction model = new AbstractCurveFitter.TheoreticalValuesFunction(new ScalableSigmoid(), points);
+        
+        
+		LeastSquaresBuilder lsb = new LeastSquaresBuilder();
+		lsb.maxEvaluations(100000);
+		lsb.maxIterations(100000);
+		lsb.start(new double[] {1.0,1.0,1.0,1.0});
+		lsb.target(target);
+		lsb.weight(new DiagonalMatrix(weights));
+		lsb.model(model.getModelFunction(),model.getModelFunctionJacobian());
+		return lsb.build();
     }
 
   }
@@ -46,7 +69,31 @@ public class DopplerCurve
    * 
    */
   private final long _startTime;
+  
+  /**
+   * time stamp at inflection point
+   */
+  private long _inflectionTime;
+  
+  /**
+   * frequency at inflection point
+   */
+  private double _inflectionFreq;
+  
+  /**
+   * double[4] -> [a,b,c,d] for the sigmoid model:  d + (c/(1+e^(a*x+b)))
+   */
+  private double[] _modelParameters;
 
+  
+  /**
+   * scaling constant to prevent "LevenbergMarquardtOptimizer unable to perform Q.R decomposition on the ...x... jacobian matrix"
+   * error due to very large numbers on time stamps.
+   * See:https://stackoverflow.com/questions/19116987/levenbergmarquardtoptimizer-unable-to-perform-q-r-decomposition-on-the-107x2-jac
+   */
+  private static final double scaler = 1e5; 
+
+  
   public DopplerCurve(final ArrayList<Long> times, final ArrayList<Double> freqs)
   {
     // do some data testing
@@ -62,50 +109,58 @@ public class DopplerCurve
 
     _times = times;
     _freqs = freqs;
-
+    final int sampleCount = times.size();
+        
     // change the times, so they start at zero (to keep time parameters small)
     _startTime = _times.get(0);
 
     // remove this from the time values
-    for (int i = 0; i < times.size(); i++)
+    for (int i = 0; i < sampleCount; i++)
     {
       times.set(i, times.get(i) - _startTime);
     }
-
+        
     // ok, collate the data
-
     final WeightedObservedPoints obs = new WeightedObservedPoints();
-    for (int i = 0; i < times.size(); i++)
+    for (int i = 0; i < sampleCount; i++)
     {
-      obs.add(_times.get(i), _freqs.get(i));
+      obs.add(_times.get(i)/scaler, _freqs.get(i));
     }
 
-    // now Instantiate a third-degree polynomial fitter.
+    // now Instantiate a parametric sigmoid fitter.
     final AbstractCurveFitter fitter = new DopplerCurveFitter();
 
-    // Retrieve fitted parameters (coefficients of the polynomial function).
+    // Retrieve fitted parameters (a,b,c,d) for the sigmoid model:  d + (c/(1+e^(a*x+b)))
     final double[] coeff = fitter.fit(obs.toList());
 
-    System.out.println(coeff[0]);
 
-    // now check if there's an inflection point
+    // TODO: now check if there's an inflection point
 
+	
+    //construct the second order derivative of the sigmoid with this parameters  
+    SigmoidSecondDerivative derivativeFunc = new SigmoidSecondDerivative();
+	derivativeFunc.coeff = coeff;
+	
+	// use bisection solver to find the zero crossing point of derivative
+	BisectionSolver bs = new BisectionSolver(1.0e-12,1.0e-8);	
+	double root = bs.solve(1000, derivativeFunc, 0, _times.get(sampleCount-1)/scaler, _times.get(sampleCount/2)/scaler);
+			
     // and store the equation parameters
+	_modelParameters = coeff;
+	
+	_inflectionTime = (long)(root*scaler);
+	_inflectionFreq = valueAt(_inflectionTime);
   }
 
-  public boolean hasInflection()
-  {
-    return false;
-  }
 
   public double inflectionFreq()
   {
-    return -1;
+    return _inflectionFreq;
   }
 
   public long inflectionTime()
   {
-    return -1;
+    return _inflectionTime;
   }
 
   /**
@@ -117,6 +172,6 @@ public class DopplerCurve
    */
   public double valueAt(final long t)
   {
-    return 149.5 + Math.random() * 1d;
+    return new ScalableSigmoid().value(t/scaler, _modelParameters);
   }
 }
