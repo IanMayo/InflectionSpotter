@@ -120,7 +120,10 @@ public class DopplerCurve
     final WeightedObservedPoints obs = new WeightedObservedPoints();
     for (int i = 0; i < sampleCount; i++)
     {
-      obs.add((_times.get(i) - _startTime) / scaler, _freqs.get(i));
+      double thisTime = (_times.get(i) - _startTime) / scaler;
+      obs.add(thisTime, _freqs.get(i));
+      
+      System.out.println(thisTime + ", " + _freqs.get(i));
     }
 
     // now Instantiate a parametric sigmoid fitter.
