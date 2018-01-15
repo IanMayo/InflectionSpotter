@@ -45,6 +45,16 @@ public class inflictionPointDetector {
 				
 		System.out.format("Inflection time: %dms\n",dc.inflectionTime());
 		System.out.format("Inflection frequency: %fHz\n",dc.inflectionFreq());
+		
+		// output sample curve
+		long startT = timeStamps.get(0);
+		long endT = timeStamps.get(timeStamps.size()-1);
+		long delta = (endT - startT) / 5;
+		System.out.println("Coords fitted curve");
+		for(long i=startT;i<=endT;i+=delta)
+		{
+		  System.out.println((i - startT)/1e5 + ", " + dc.valueAt(i));
+		}
 
 	}
 
