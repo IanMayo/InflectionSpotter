@@ -113,20 +113,14 @@ public class DopplerCurve
     _freqs = freqs;
     final int sampleCount = times.size();
 
-    // change the times, so they start at zero (to keep time parameters small)
+    // generate the time offset
     _startTime = _times.get(0);
-
-    // remove this from the time values
-    for (int i = 0; i < sampleCount; i++)
-    {
-      times.set(i, times.get(i) - _startTime);
-    }
 
     // ok, collate the data
     final WeightedObservedPoints obs = new WeightedObservedPoints();
     for (int i = 0; i < sampleCount; i++)
     {
-      obs.add(_times.get(i) / scaler, _freqs.get(i));
+      obs.add((_times.get(i) - _startTime) / scaler, _freqs.get(i));
     }
 
     // now Instantiate a parametric sigmoid fitter.
@@ -143,13 +137,13 @@ public class DopplerCurve
     // use bisection solver to find the zero crossing point of derivative
     final BisectionSolver bs = new BisectionSolver(1.0e-12, 1.0e-8);
     final double root =
-        bs.solve(1000, derivativeFunc, 0, _times.get(sampleCount - 1) / scaler,
-            _times.get(sampleCount / 2) / scaler);
+        bs.solve(1000, derivativeFunc, 0, ( _times.get(sampleCount - 1) - _startTime) / scaler,
+            (_times.get(sampleCount / 2) - _startTime) / scaler);
 
     // and store the equation parameters
     _modelParameters = coeff;
 
-    _inflectionTime = (long) (root * scaler);
+    _inflectionTime = (long) (root * scaler) + _startTime;
     _inflectionFreq = valueAt(_inflectionTime);
   }
 
@@ -160,7 +154,7 @@ public class DopplerCurve
 
   public long inflectionTime()
   {
-    return _inflectionTime + _startTime;
+    return _inflectionTime;
   }
 
   /**
@@ -172,6 +166,6 @@ public class DopplerCurve
    */
   public double valueAt(final long t)
   {
-    return new ScalableSigmoid().value(t / scaler, _modelParameters);
+    return new ScalableSigmoid().value((t - _startTime) / scaler, _modelParameters);
   }
 }
