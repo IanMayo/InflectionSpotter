@@ -160,7 +160,7 @@ public class DopplerCurve
 
   public long inflectionTime()
   {
-    return _inflectionTime;
+    return _inflectionTime + _startTime;
   }
 
   /**
