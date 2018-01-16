@@ -94,7 +94,7 @@ public class DopplerCurve
    * See:https://stackoverflow.com/questions/19116987
    * /levenbergmarquardtoptimizer-unable-to-perform-q-r-decomposition-on-the-107x2-jac
    */
-  private static final double scaler = 1e5;
+  private final double scaler;
 
   public DopplerCurve(final ArrayList<Long> times, final ArrayList<Double> freqs)
   {
@@ -115,6 +115,8 @@ public class DopplerCurve
 
     // generate the time offset
     _startTime = _times.get(0);
+    long endTime = _times.get(times.size()-1);
+    scaler = endTime - _startTime;
 
     // ok, collate the data
     final WeightedObservedPoints obs = new WeightedObservedPoints();
