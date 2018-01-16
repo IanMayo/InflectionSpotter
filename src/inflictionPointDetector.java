@@ -41,6 +41,8 @@ public class inflictionPointDetector {
 		}
 		br.close();
 		
+		System.out.format("Processing: %s\n", args[0]);
+		
 		DopplerCurve dc = new DopplerCurve(timeStamps, values);
 				
 		System.out.format("Inflection time: %dms\n",dc.inflectionTime());
@@ -53,7 +55,7 @@ public class inflictionPointDetector {
 		System.out.println("Coords fitted curve");
 		for(long i=startT;i<=endT;i+=delta)
 		{
-		  System.out.println((i - startT)/1e5 + ", " + dc.valueAt(i));
+		  System.out.println(i + ", " + dc.valueAt(i));
 		}
 
 	}
