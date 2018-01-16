@@ -116,7 +116,10 @@ public class DopplerCurve
     // generate the time offset
     _startTime = _times.get(0);
     long endTime = _times.get(times.size()-1);
-    scaler = endTime - _startTime;
+    
+    scaler = 1e5;// endTime - _startTime;
+    System.out.println("scaler:" + scaler);
+    
 
     // ok, collate the data
     final WeightedObservedPoints obs = new WeightedObservedPoints();
@@ -142,7 +145,7 @@ public class DopplerCurve
     // use bisection solver to find the zero crossing point of derivative
     final BisectionSolver bs = new BisectionSolver(1.0e-12, 1.0e-8);
     final double root =
-        bs.solve(1000, derivativeFunc, 0, ( _times.get(sampleCount - 1) - _startTime) / scaler,
+        bs.solve(500000, derivativeFunc, 0, ( _times.get(sampleCount - 1) - _startTime) / scaler,
             (_times.get(sampleCount / 2) - _startTime) / scaler);
 
     // and store the equation parameters
