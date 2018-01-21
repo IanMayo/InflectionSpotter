@@ -1,5 +1,4 @@
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 
 import org.apache.commons.math3.analysis.solvers.BisectionSolver;
@@ -86,17 +85,17 @@ public class DopplerCurve
   /**
    * time stamp at inflection point
    */
-  private long _inflectionTime;
+  private final long _inflectionTime;
 
   /**
    * frequency at inflection point
    */
-  private double _inflectionFreq;
+  private final double _inflectionFreq;
 
   /**
    * double[4] -> [a,b,c,d] for the sigmoid model: d + (c/(1+e^(a*x+b)))
    */
-  private double[] _modelParameters;
+  private final double[] _modelParameters;
 
   public DopplerCurve(final ArrayList<Long> times, final ArrayList<Double> freqs)
   {
@@ -133,8 +132,11 @@ public class DopplerCurve
 
     // ok, collate the data
     final WeightedObservedPoints obs = new WeightedObservedPoints();
-    for (int i = 0; i < sampleCount; i++)
+
+    // use reverse counter, so the curve still appears in chronological order
+    for (int i = sampleCount - 1; i >= 0; i--)
     {
+      System.out.println(_normalizedTimes[i] + ", " + _freqs.get(i));
       obs.add(_normalizedTimes[i], _freqs.get(i)); // _normalizedFreqs[i]);
     }
 
@@ -184,5 +186,10 @@ public class DopplerCurve
         1 - (((double) (t - _startTime)) / _timeStampSpan), _modelParameters); // taking into
                                                                                // account that time
                                                                                // is reversed
+  }
+
+  public double[] getCoords()
+  {
+    return _modelParameters;
   }
 }
