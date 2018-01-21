@@ -45,7 +45,7 @@ public class DopplerCurve
       lsb.maxEvaluations(100000);
       lsb.maxIterations(100000);
       lsb.start(new double[]
-      {1.0, 1.0, 1.0, 1.0});
+      {1.0, -0.5, 1.0, 1.0});
       lsb.target(target);
       lsb.weight(new DiagonalMatrix(weights));
       lsb.model(model.getModelFunction(), model.getModelFunctionJacobian());
