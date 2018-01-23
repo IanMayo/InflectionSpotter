@@ -7,6 +7,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
 import java.util.ArrayList;
+import java.util.TimeZone;
 
 public class inflictionPointDetector
 {
@@ -32,6 +33,7 @@ public class inflictionPointDetector
     Assert(f.exists(), String.format("File %s doesn't exist!", args[0]));
 
     DateFormat df = new SimpleDateFormat("HH:mm:ss");
+    df.setTimeZone(TimeZone.getTimeZone("GMT"));
 
     BufferedReader br = new BufferedReader(new FileReader(args[0]));
     while ((line = br.readLine()) != null)

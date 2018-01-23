@@ -42,8 +42,8 @@ public class DopplerCurve
               new ScalableSigmoid(), points);
 
       LeastSquaresBuilder lsb = new LeastSquaresBuilder();
-      lsb.maxEvaluations(100000);
-      lsb.maxIterations(100000);
+      lsb.maxEvaluations(1000000);
+      lsb.maxIterations(1000000);
       lsb.start(new double[]
       {1.0, -0.5, 1.0, 1.0});
       lsb.target(target);
@@ -122,10 +122,10 @@ public class DopplerCurve
     for (int i = 0; i < sampleCount; i++)
     {
       // time is reversed after normalization by (1-x) to make the shape of sigmodi match the data
-      // _____
+      //                           _____
       // shape of sigmoid : ______/
-      // ______
-      // shape of our data: \_____
+      //                    ______
+      // shape of our data:       \_____
       _normalizedTimes[i] =
           1 - (((double) (times.get(i) - _startTime)) / _timeStampSpan);
     }
@@ -133,13 +133,24 @@ public class DopplerCurve
     // ok, collate the data
     final WeightedObservedPoints obs = new WeightedObservedPoints();
 
+    
+    
+    // add the first sample manually as the loop will add pairs of (midpoint,sample)
+    obs.add(_normalizedTimes[sampleCount-1], _freqs.get(sampleCount-1));
+    System.out.println(_normalizedTimes[sampleCount-1] + ", " + _freqs.get(sampleCount-1));
+    
     // use reverse counter, so the curve still appears in chronological order
-    for (int i = sampleCount - 1; i >= 0; i--)
+    for (int i = sampleCount - 2; i >= 0; i--)
     {
+      // add sample midpoints too as samples to curve fitter
+      //obs.add((_normalizedTimes[i]+_normalizedTimes[i+1])/2.0, (_freqs.get(i)+_freqs.get(i+1))/2.0);
+      //System.out.println((_normalizedTimes[i]+_normalizedTimes[i+1])/2.0+","+ (_freqs.get(i)+_freqs.get(i+1))/2.0);
+      
+      obs.add(_normalizedTimes[i], _freqs.get(i)); 
       System.out.println(_normalizedTimes[i] + ", " + _freqs.get(i));
-      obs.add(_normalizedTimes[i], _freqs.get(i)); // _normalizedFreqs[i]);
     }
-
+    
+     
     // now Instantiate a parametric sigmoid fitter.
     final AbstractCurveFitter fitter = new DopplerCurveFitter();
 
