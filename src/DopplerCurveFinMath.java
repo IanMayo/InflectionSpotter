@@ -4,7 +4,6 @@ import net.finmath.optimizer.LevenbergMarquardt;
 import net.finmath.optimizer.SolverException;
 
 import org.apache.commons.math3.analysis.solvers.BisectionSolver;
-import org.apache.commons.math3.fitting.WeightedObservedPoints;
 
 public class DopplerCurveFinMath implements IDopplerCurve
 {
@@ -12,12 +11,12 @@ public class DopplerCurveFinMath implements IDopplerCurve
   /**
    * time stamp at inflection point
    */
-  private long _inflectionTime;
+  private final long _inflectionTime;
 
   /**
    * frequency at inflection point
    */
-  private double _inflectionFreq;
+  private final double _inflectionFreq;
 
   /**
    * double[4] -> [a,b,c,d] for the sigmoid model: d + (c/(1+e^(a*x+b)))
@@ -26,8 +25,6 @@ public class DopplerCurveFinMath implements IDopplerCurve
 
   private final Normaliser _timeNormaliser;
   private final Normaliser _freqNormaliser;
-
-  private double[] _times;
 
   public DopplerCurveFinMath(final ArrayList<Long> times,
       final ArrayList<Double> freqs)
@@ -43,37 +40,32 @@ public class DopplerCurveFinMath implements IDopplerCurve
       throw new IllegalArgumentException("The input datasets cannot be empty");
     }
 
+    final int sampleCount = times.size();
+
     // convert the times to doubles
     ArrayList<Double> dTimes = new ArrayList<Double>();
     for (Long t : times)
     {
       dTimes.add((double) t);
     }
+
+    // create the normaliser for the two datasets
     _timeNormaliser = new Normaliser(dTimes, false);
     _freqNormaliser = new Normaliser(freqs, true);
 
-    final int sampleCount = times.size();
-
     // ok, collate the data
-    final WeightedObservedPoints obs = new WeightedObservedPoints();
-
-    double[] freqArr = new double[sampleCount];
-
-    _times = new double[sampleCount];
-    double[] weights = new double[sampleCount];
+    final double[] normalTimes = new double[sampleCount];
+    final double[] normalFreqs = new double[sampleCount];
+    final double[] weights = new double[sampleCount];
 
     for (int i = 0; i < sampleCount; i++)
     {
       double time = _timeNormaliser.normalise(dTimes.get(i));
       double freq = _freqNormaliser.normalise(freqs.get(i));
-      obs.add(time, freq);
 
-      _times[i] = time;
-      freqArr[i] = freq;
-
+      normalTimes[i] = time;
+      normalFreqs[i] = freq;
       weights[i] = 1d;
-      
-      System.out.println(time + ", " + freq);
     }
 
     LevenbergMarquardt optimizer = new LevenbergMarquardt()
@@ -84,16 +76,16 @@ public class DopplerCurveFinMath implements IDopplerCurve
       private static final long serialVersionUID = 1L;
 
       // Override your objective function here
-      public void setValues(double[] params, double[] values)
+      public void setValues(final double[] params, final double[] values)
       {
-        double a = params[0];
-        double b = params[1];
-        double c = params[2];
-        double d = params[3];
+        final double a = params[0];
+        final double b = params[1];
+        final double c = params[2];
+        final double d = params[3];
 
-        for (int i = 0; i < _times.length; i++)
+        for (int i = 0; i < normalTimes.length; i++)
         {
-          double thisT = _times[i];
+          final double thisT = normalTimes[i];
           values[i] = ((a - d) / (1.0 + Math.pow(thisT / c, b))) + d;
         }
       }
@@ -104,7 +96,7 @@ public class DopplerCurveFinMath implements IDopplerCurve
     {1, 1, 1, 1});
     optimizer.setWeights(weights);
     optimizer.setMaxIteration(10000);
-    optimizer.setTargetValues(freqArr);
+    optimizer.setTargetValues(normalFreqs);
 
     try
     {
@@ -113,24 +105,17 @@ public class DopplerCurveFinMath implements IDopplerCurve
     }
     catch (SolverException e)
     {
-      // TODO Auto-generated catch block
       e.printStackTrace();
     }
 
-    
-     // and store the equation parameters
-//     _modelParameters = coeff;
-    
-     FourParameterLogisticSecondDrivative derivativeFunc =
-         new FourParameterLogisticSecondDrivative(); // ***
-     derivativeFunc.coeff = _modelParameters;
+    FourParameterLogisticSecondDrivative derivativeFunc =
+        new FourParameterLogisticSecondDrivative(_modelParameters);
 
-     // use bisection solver to find the zero crossing point of derivative
-     BisectionSolver bs = new BisectionSolver(1.0e-12, 1.0e-8);
-     double root = bs.solve(1000000, derivativeFunc, 0, 1, 0.5);
-
-     _inflectionTime = (long) _timeNormaliser.deNormalise(root); 
-     _inflectionFreq = valueAt(_inflectionTime);
+    // use bisection solver to find the zero crossing point of derivative
+    BisectionSolver bs = new BisectionSolver(1.0e-12, 1.0e-8);
+    double root = bs.solve(1000000, derivativeFunc, 0.01, 1, 0.5);
+    _inflectionTime = (long) _timeNormaliser.deNormalise(root);
+    _inflectionFreq = valueAt(_inflectionTime);
   }
 
   public double inflectionFreq()
@@ -153,12 +138,19 @@ public class DopplerCurveFinMath implements IDopplerCurve
   public double valueAt(final long t)
   {
     double normalised = _timeNormaliser.normalise(t);
-    double val = new FourParameterLogistic().value(normalised, _modelParameters);
+    double val =
+        new FourParameterLogistic().value(normalised, _modelParameters);
     return _freqNormaliser.deNormalise(val);
   }
 
-  public double[] getCoords()
+  @Override
+  public void printCoords()
   {
-    return _modelParameters;
+    final double[] coords = _modelParameters;
+    for (int i = 0; i < coords.length; i++)
+    {
+      System.out.print(coords[i] + " , ");
+    }
+    System.out.println();
   }
 }

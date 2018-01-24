@@ -68,7 +68,7 @@ public class inflictionPointDetector
     final long startT = timeStamps.get(0);
     final long endT = timeStamps.get(timeStamps.size() - 1);
     final long delta = (endT - startT) / 5;
-    System.out.println("Coords fitted curve");
+    System.out.println("Coords for fitted curve");
     for (long i = startT; i <= endT; i += delta)
     {
       System.out.println(i + ", " + dc.valueAt(i));
