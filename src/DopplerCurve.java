@@ -18,6 +18,7 @@ public class DopplerCurve
    * @author Ian
    * 
    */
+  @SuppressWarnings("unused")
   private static class DopplerCurveFitter extends AbstractCurveFitter
   {
 
@@ -58,7 +59,6 @@ public class DopplerCurve
   
   private static class FourPLCurveFitter extends AbstractCurveFitter
   {
-
     @Override
     protected LeastSquaresProblem getProblem(
         final Collection<WeightedObservedPoint> points)
@@ -91,36 +91,6 @@ public class DopplerCurve
     }
 
   }
-  
-  
-  
-  /**
-   * times of samples
-   * 
-   */
-  private final ArrayList<Long> _times;
-
-  /**
-   * times normalised to 0..1 range
-   */
-  private final double[] _normalizedTimes;
-
-  /**
-   * number of milliseconds from first pointto last point
-   */
-  private final long _timeStampSpan;
-
-  /**
-   * measured frequencies
-   * 
-   */
-  private final ArrayList<Double> _freqs;
-
-  /**
-   * use the first time value as an offset
-   * 
-   */
-  private final long _startTime;
 
   /**
    * time stamp at inflection point
@@ -136,6 +106,9 @@ public class DopplerCurve
    * double[4] -> [a,b,c,d] for the sigmoid model: d + (c/(1+e^(a*x+b)))
    */
   private final double[] _modelParameters;
+  
+  private final Normaliser _timeNormaliser;
+  private final Normaliser _freqNormaliser;
 
   public DopplerCurve(final ArrayList<Long> times, final ArrayList<Double> freqs)
   {
@@ -149,48 +122,29 @@ public class DopplerCurve
     {
       throw new IllegalArgumentException("The input datasets cannot be empty");
     }
-
-    _times = times;
-    _freqs = freqs;
-    final int sampleCount = times.size();
-
-    _startTime = _times.get(0);
-    _normalizedTimes = new double[sampleCount];
-    _timeStampSpan = _times.get(_times.size() - 1) - _startTime;
-
-    // normalize time span to 0..1
-    for (int i = 0; i < sampleCount; i++)
+    
+    // convert the times to doubles
+    ArrayList<Double> dTimes = new ArrayList<Double>();
+    for(Long t: times)
     {
-      // time is reversed after normalization by (1-x) to make the shape of sigmodi match the data
-      //                           _____
-      // shape of sigmoid : ______/
-      //                    ______
-      // shape of our data:       \_____
-      _normalizedTimes[i] =
-          1 - (((double) (times.get(i) - _startTime)) / _timeStampSpan);
+      dTimes.add((double)t);
     }
+    _timeNormaliser = new Normaliser(dTimes, false);
+    _freqNormaliser = new Normaliser(freqs, true);
+
+    final int sampleCount = times.size();
 
     // ok, collate the data
     final WeightedObservedPoints obs = new WeightedObservedPoints();
 
-    
-    
-    // add the first sample manually as the loop will add pairs of (midpoint,sample)
-    obs.add(_normalizedTimes[sampleCount-1], _freqs.get(sampleCount-1));
-    System.out.println(_normalizedTimes[sampleCount-1] + ", " + _freqs.get(sampleCount-1));
-    
-    // use reverse counter, so the curve still appears in chronological order
-    for (int i = sampleCount - 2; i >= 0; i--)
+    for(int i=0;i<sampleCount; i++)
     {
-      // add sample midpoints too as samples to curve fitter
-      //obs.add((_normalizedTimes[i]+_normalizedTimes[i+1])/2.0, (_freqs.get(i)+_freqs.get(i+1))/2.0);
-      //System.out.println((_normalizedTimes[i]+_normalizedTimes[i+1])/2.0+","+ (_freqs.get(i)+_freqs.get(i+1))/2.0);
-      
-      obs.add(_normalizedTimes[i], _freqs.get(i)); 
-      System.out.println(_normalizedTimes[i] + ", " + _freqs.get(i));
+      double time = _timeNormaliser.normalise(dTimes.get(i));
+      double freq = _freqNormaliser.normalise(freqs.get(i));
+      obs.add(time, freq);
+      System.out.println(time + ", " + freq);
     }
     
-     
     // now Instantiate a parametric sigmoid fitter.
     //final AbstractCurveFitter fitter = new DopplerCurveFitter();   // ***
     final AbstractCurveFitter fitter = new FourPLCurveFitter();   // ***
@@ -211,7 +165,7 @@ public class DopplerCurve
     // and store the equation parameters
     _modelParameters = coeff;
 
-    _inflectionTime = _startTime + (long) ((_timeStampSpan * (1 - root))); // taking into account
+    _inflectionTime = (long) _timeNormaliser.deNormalise(root); // taking into account
                                                                            // that time is reversed
     _inflectionFreq = valueAt(_inflectionTime);
   }
@@ -235,8 +189,8 @@ public class DopplerCurve
    */
   public double valueAt(final long t)
   {
-    return new ScalableSigmoid().value(
-        1 - (((double) (t - _startTime)) / _timeStampSpan), _modelParameters); // taking into
+    double normalised = _timeNormaliser.normalise(t);
+    return new ScalableSigmoid().value(normalised, _modelParameters); // taking into
                                                                                // account that time
                                                                                // is reversed
   }
