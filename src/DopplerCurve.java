@@ -154,8 +154,7 @@ public class DopplerCurve implements IDopplerCurve
     // construct the second order derivative of the sigmoid with this parameters
     // SigmoidSecondDerivative derivativeFunc = new SigmoidSecondDerivative(); // ***
     FourParameterLogisticSecondDrivative derivativeFunc =
-        new FourParameterLogisticSecondDrivative(); // ***
-    derivativeFunc.coeff = coeff;
+        new FourParameterLogisticSecondDrivative(coeff); // ***
 
     // use bisection solver to find the zero crossing point of derivative
     BisectionSolver bs = new BisectionSolver(1.0e-12, 1.0e-8);
@@ -196,13 +195,16 @@ public class DopplerCurve implements IDopplerCurve
     double normalised = _timeNormaliser.normalise(t);
     return new ScalableSigmoid().value(normalised, _modelParameters);
   }
-
-  /* (non-Javadoc)
-   * @see IDopplerCurve#getCoords()
-   */
+  
   @Override
-  public double[] getCoords()
+  public void printCoords()
   {
-    return _modelParameters;
+    final double[] coords = _modelParameters;
+    for (int i = 0; i < coords.length; i++)
+    {
+      System.out.print(coords[i] + " , ");
+    }
+    System.out.println();
   }
+
 }

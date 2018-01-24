@@ -14,6 +14,10 @@ public interface IDopplerCurve
    */
   public abstract double valueAt(long t);
 
-  public abstract double[] getCoords();
+
+  /** output the coordinates
+   * 
+   */
+  public abstract void printCoords();
 
 }
