@@ -54,6 +54,46 @@ public class DopplerCurve
 
   }
 
+  
+  
+  private static class FourPLCurveFitter extends AbstractCurveFitter
+  {
+
+    @Override
+    protected LeastSquaresProblem getProblem(
+        final Collection<WeightedObservedPoint> points)
+    {
+      final int len = points.size();
+      final double[] target = new double[len];
+      final double[] weights = new double[len];
+
+      int i = 0;
+      for (WeightedObservedPoint point : points)
+      {
+        target[i] = point.getY();
+        weights[i] = point.getWeight();
+        i += 1;
+      }
+
+      AbstractCurveFitter.TheoreticalValuesFunction model =
+          new AbstractCurveFitter.TheoreticalValuesFunction(
+              new FourParameterLogistic(), points);
+
+      LeastSquaresBuilder lsb = new LeastSquaresBuilder();
+      lsb.maxEvaluations(1000000);
+      lsb.maxIterations(1000000);
+      lsb.start(new double[]
+      {1.0, -0.5, 1.0, 1.0});
+      lsb.target(target);
+      lsb.weight(new DiagonalMatrix(weights));
+      lsb.model(model.getModelFunction(), model.getModelFunctionJacobian());
+      return lsb.build();
+    }
+
+  }
+  
+  
+  
   /**
    * times of samples
    * 
@@ -152,14 +192,16 @@ public class DopplerCurve
     
      
     // now Instantiate a parametric sigmoid fitter.
-    final AbstractCurveFitter fitter = new DopplerCurveFitter();
+    //final AbstractCurveFitter fitter = new DopplerCurveFitter();   // ***
+    final AbstractCurveFitter fitter = new FourPLCurveFitter();   // ***
 
     // Retrieve fitted parameters (a,b,c,d) for the sigmoid model: d + (c/(1+e^(a*x+b)))
     final double[] coeff = fitter.fit(obs.toList());
 
     // --- checking for inflection point ---
     // construct the second order derivative of the sigmoid with this parameters
-    SigmoidSecondDerivative derivativeFunc = new SigmoidSecondDerivative();
+    //SigmoidSecondDerivative derivativeFunc = new SigmoidSecondDerivative();   // ***
+    FourParameterLogisticSecondDrivative derivativeFunc = new FourParameterLogisticSecondDrivative();   // ***
     derivativeFunc.coeff = coeff;
 
     // use bisection solver to find the zero crossing point of derivative
