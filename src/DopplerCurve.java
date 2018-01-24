@@ -9,7 +9,7 @@ import org.apache.commons.math3.fitting.leastsquares.LeastSquaresBuilder;
 import org.apache.commons.math3.fitting.leastsquares.LeastSquaresProblem;
 import org.apache.commons.math3.linear.DiagonalMatrix;
 
-public class DopplerCurve
+public class DopplerCurve implements IDopplerCurve
 {
 
   /**
@@ -169,29 +169,38 @@ public class DopplerCurve
     _inflectionFreq = valueAt(_inflectionTime);
   }
 
+  /* (non-Javadoc)
+   * @see IDopplerCurve#inflectionFreq()
+   */
+  @Override
   public double inflectionFreq()
   {
     return _inflectionFreq;
   }
 
+  /* (non-Javadoc)
+   * @see IDopplerCurve#inflectionTime()
+   */
+  @Override
   public long inflectionTime()
   {
     return _inflectionTime;
   }
 
-  /**
-   * calculate the value on the curve at this time
-   * 
-   * @param t
-   *          time
-   * @return frequency at this time
+  /* (non-Javadoc)
+   * @see IDopplerCurve#valueAt(long)
    */
+  @Override
   public double valueAt(final long t)
   {
     double normalised = _timeNormaliser.normalise(t);
     return new ScalableSigmoid().value(normalised, _modelParameters);
   }
 
+  /* (non-Javadoc)
+   * @see IDopplerCurve#getCoords()
+   */
+  @Override
   public double[] getCoords()
   {
     return _modelParameters;
