@@ -22,7 +22,6 @@ public class inflictionPointDetector
   public static void main(final String[] args) throws IOException,
       ParseException
   {
-
     String line;
 
     final ArrayList<Double> values = new ArrayList<Double>();
@@ -34,6 +33,8 @@ public class inflictionPointDetector
     final File f = new File(args[0]);
     Assert(f.exists(), String.format("File %s doesn't exist!", args[0]));
 
+    System.out.format("Processing: %s\n", args[0]);
+    
     final DateFormat df = new SimpleDateFormat("HH:mm:ss");
     df.setTimeZone(TimeZone.getTimeZone("GMT"));
 
@@ -51,13 +52,9 @@ public class inflictionPointDetector
       values.add(dVal);
       final long tVal = df.parse(cells[0]).getTime();
       timeStamps.add(tVal);
-
       System.out.println(tVal + ", " + dVal);
-
     }
     br.close();
-
-    System.out.format("Processing: %s\n", args[0]);
 
     final IDopplerCurve dc = new DopplerCurveFinMath(timeStamps, values);
 
@@ -65,12 +62,7 @@ public class inflictionPointDetector
         .inflectionTime(), df.format(new java.util.Date(dc.inflectionTime())));
     System.out.format("Inflection frequency: %fHz\n", dc.inflectionFreq());
     System.out.print("Coords:");
-    final double[] coords = dc.getCoords();
-    for (int i = 0; i < coords.length; i++)
-    {
-      System.out.print(dc.getCoords()[i] + " , ");
-    }
-    System.out.println();
+    dc.printCoords();
 
     // output sample curve
     final long startT = timeStamps.get(0);
