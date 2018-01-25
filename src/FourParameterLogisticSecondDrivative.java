@@ -1,3 +1,4 @@
+
 import org.apache.commons.math3.analysis.UnivariateFunction;
 
 public class FourParameterLogisticSecondDrivative implements UnivariateFunction
