@@ -1,3 +1,4 @@
+
 import org.apache.commons.math3.analysis.ParametricUnivariateFunction;
 
 public class ScalableSigmoid implements ParametricUnivariateFunction {

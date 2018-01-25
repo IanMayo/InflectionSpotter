@@ -1,3 +1,4 @@
+
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -9,7 +10,7 @@ import org.apache.commons.math3.fitting.leastsquares.LeastSquaresBuilder;
 import org.apache.commons.math3.fitting.leastsquares.LeastSquaresProblem;
 import org.apache.commons.math3.linear.DiagonalMatrix;
 
-public class DopplerCurve
+public class DopplerCurve implements IDopplerCurve
 {
 
   /**
@@ -106,7 +107,6 @@ public class DopplerCurve
   private final double[] _modelParameters;
 
   private final Normaliser _timeNormaliser;
-  private final Normaliser _freqNormaliser;
 
   public DopplerCurve(final ArrayList<Long> times, final ArrayList<Double> freqs)
   {
@@ -128,7 +128,7 @@ public class DopplerCurve
       dTimes.add((double) t);
     }
     _timeNormaliser = new Normaliser(dTimes, false);
-    _freqNormaliser = new Normaliser(freqs, true);
+    final Normaliser freqNormaliser = new Normaliser(freqs, true);
 
     final int sampleCount = times.size();
 
@@ -138,7 +138,7 @@ public class DopplerCurve
     for (int i = 0; i < sampleCount; i++)
     {
       double time = _timeNormaliser.normalise(dTimes.get(i));
-      double freq = _freqNormaliser.normalise(freqs.get(i));
+      double freq = freqNormaliser.normalise(freqs.get(i));
       obs.add(time, freq);
       System.out.println(time + ", " + freq);
     }
@@ -154,12 +154,11 @@ public class DopplerCurve
     // construct the second order derivative of the sigmoid with this parameters
     // SigmoidSecondDerivative derivativeFunc = new SigmoidSecondDerivative(); // ***
     FourParameterLogisticSecondDrivative derivativeFunc =
-        new FourParameterLogisticSecondDrivative(); // ***
-    derivativeFunc.coeff = coeff;
+        new FourParameterLogisticSecondDrivative(coeff); // ***
 
     // use bisection solver to find the zero crossing point of derivative
     BisectionSolver bs = new BisectionSolver(1.0e-12, 1.0e-8);
-    double root = bs.solve(1000000, derivativeFunc, 0, 1, 0.5);
+    double root = bs.solve(1000000, derivativeFunc, 0.01, 1, 0.5);
 
     // and store the equation parameters
     _modelParameters = coeff;
@@ -169,31 +168,43 @@ public class DopplerCurve
     _inflectionFreq = valueAt(_inflectionTime);
   }
 
+  /* (non-Javadoc)
+   * @see IDopplerCurve#inflectionFreq()
+   */
+  @Override
   public double inflectionFreq()
   {
     return _inflectionFreq;
   }
 
+  /* (non-Javadoc)
+   * @see IDopplerCurve#inflectionTime()
+   */
+  @Override
   public long inflectionTime()
   {
     return _inflectionTime;
   }
 
-  /**
-   * calculate the value on the curve at this time
-   * 
-   * @param t
-   *          time
-   * @return frequency at this time
+  /* (non-Javadoc)
+   * @see IDopplerCurve#valueAt(long)
    */
+  @Override
   public double valueAt(final long t)
   {
     double normalised = _timeNormaliser.normalise(t);
     return new ScalableSigmoid().value(normalised, _modelParameters);
   }
-
-  public double[] getCoords()
+  
+  @Override
+  public void printCoords()
   {
-    return _modelParameters;
+    final double[] coords = _modelParameters;
+    for (int i = 0; i < coords.length; i++)
+    {
+      System.out.print(coords[i] + " , ");
+    }
+    System.out.println();
   }
+
 }
